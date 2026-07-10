@@ -89,6 +89,11 @@ MAX_MENU_ITEMS: int = 11
 # Camera
 CAMERA_SHAKE_RANGE: tuple[float, float] = (0.0, 3.0)
 
+# World map zoom: pyscroll shrinks tiles by 1/WORLD_VIEW_ZOOM before
+# rendering, so 0.5 doubles the number of tiles visible on screen while
+# keeping the actual window resolution/UI scaling untouched.
+WORLD_VIEW_ZOOM: float = 0.5
+
 # Techniques
 RECHARGE_RANGE: tuple[int, int] = (0, 5)
 POTENCY_RANGE: tuple[float, float] = (0.0, 1.0)

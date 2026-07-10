@@ -14,6 +14,7 @@ from pytmx.pytmx import TiledMap
 
 from tuxemon.graphics import scaled_image_loader
 from tuxemon.locale.locale import T
+from tuxemon.platform.const.sizes import WORLD_VIEW_ZOOM
 
 if TYPE_CHECKING:
     from tuxemon.db import Direction, EventObject
@@ -314,6 +315,7 @@ class TuxemonMap(AbstractMap):
             self._resolution,
             clamp_camera=clamp,
             tall_sprites=self.SPRITE_LAYER_INDEX,
+            zoom=WORLD_VIEW_ZOOM,
         )
 
     def add_events(self, new_events: Sequence[EventObject]) -> None:
