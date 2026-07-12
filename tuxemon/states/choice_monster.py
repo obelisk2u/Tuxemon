@@ -29,7 +29,7 @@ class MenuMonsterConfig:
     max_elements: int = 15
     max_height_percentage: float = 0.8
     animation_start_size: float = 0.0
-    number_widgets: int = 4
+    number_widgets: int = 5
     number_columns: int = 5
     scale_sprite: float = 0.4
     vertical_fill: int = 20
@@ -106,6 +106,13 @@ class ChoiceMonster(PygameMenuState):
         )
         image = self._create_image_from_surface(sprite.image)
         self.menu.add.image(image, align=ALIGN_CENTER)
+
+        type_icon = self._create_image(
+            f"gfx/ui/icons/element/{monster.types[0]}_type_small.png"
+        )
+        type_icon_scale = self.factor * self.config.scale_sprite
+        type_icon.scale(type_icon_scale, type_icon_scale)
+        self.menu.add.image(type_icon, align=ALIGN_CENTER)
 
         self.menu.add.button(
             T.translate(name),

@@ -3,7 +3,6 @@
  <properties>
   <property name="inside" type="bool" value="true"/>
   <property name="map_type" value="notype"/>
-  <property name="scenario" value="start_tuxemon"/>
   <property name="slug" value="start_tuxemon"/>
  </properties>
  <layer id="1" name="Tile Layer 1" width="8" height="8">

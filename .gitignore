@@ -7,6 +7,7 @@ __pycache__/
 
 # Distribution / packaging
 venv/
+.venv/
 bin/
 build/
 develop-eggs/
@@ -77,3 +78,7 @@ mods/tuxemon/maps/~$Map Helper.xlsx
 mods/tuxemon/db/encounter/~$JSON-o-matic for Encounters.ods
 /.mypy_cache/
 mods/tuxemon/maps/add_char_face.py
+
+# Tiled editor local session/project files
+*.tiled-session
+*.tiled-project

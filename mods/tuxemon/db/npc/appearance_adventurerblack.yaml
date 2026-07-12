@@ -1,0 +1,10 @@
+slug: appearance_adventurerblack
+speech:
+  profile:
+    default: {}
+combat: {}
+audio: {}
+template:
+  sprite_name: adventurerblack
+  combat_sheet: adventurerblack
+  slug: adventurer

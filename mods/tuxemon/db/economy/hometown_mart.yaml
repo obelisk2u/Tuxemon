@@ -1,0 +1,14 @@
+background: gfx/ui/item/item_menu_bg.png
+items:
+- cost: 5
+  slug: potion
+  price: 20
+- cost: 20
+  slug: revive
+  price: 100
+- cost: 10
+  slug: tuxeball
+  price: 50
+monsters: []
+resale_multiplier: 0.5
+slug: hometown_mart

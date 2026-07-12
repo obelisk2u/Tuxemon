@@ -51,12 +51,16 @@ class CommonAction:
             parameter: The parameter to modify.
             value: The value to set the parameter to, as a string.
         """
-        attr = CommonAction._get_attribute(entity, parameter)
-        if attr is None:
+        if not hasattr(entity, parameter):
+            logger.warning(
+                f"Entity parameter '{parameter}' specified does not exist.",
+            )
             return
 
+        attr = getattr(entity, parameter)
+        attr_type = type(attr) if attr is not None else str
         try:
-            val = type(attr)(value)
+            val = attr_type(value)
         except (TypeError, ValueError):
             logger.warning(
                 f"The value given cannot be parsed into the correct type for '{parameter}'",

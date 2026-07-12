@@ -11,6 +11,7 @@ from typing import (
     no_type_check,
 )
 
+from pygame.font import Font, get_default_font
 from pygame.surface import Surface
 
 from tuxemon.camera.camera import Camera
@@ -23,11 +24,13 @@ from tuxemon.event.eventmiddleware import (
     WorldCommandMiddleware,
 )
 from tuxemon.faction.manager import FactionManager
+from tuxemon.platform.const.graphics import WHITE_COLOR
 from tuxemon.platform.events import PlayerInput
 from tuxemon.prepare import DEV_TOOLS
 from tuxemon.save_system.save_state import WorldSave
 from tuxemon.session import Session
 from tuxemon.state.state import State
+from tuxemon.ui.text_renderer import TextRenderer
 from tuxemon.world.manager import WorldMenuManager
 from tuxemon.world.transition import WorldTransition
 
@@ -157,6 +160,22 @@ class WorldState(State):
             surface, self.client.map_manager.current_map
         )
         self.transition_manager.draw(surface)
+        self._draw_position_hud(surface)
+
+    def _draw_position_hud(self, surface: Surface) -> None:
+        """Draw the player's current tile position in the top-right corner."""
+        if self.player is None:
+            return
+        x, y = self.player.tile_pos
+        renderer = TextRenderer(
+            scaling=self.client.context.scaling,
+            font_color=WHITE_COLOR,
+            font=Font(get_default_font(), 15),
+        )
+        image = renderer.shadow_text(f"X: {x}  Y: {y}")
+        rect = image.get_rect()
+        rect.topright = (surface.get_width() - 8, 8)
+        surface.blit(image, rect)
 
     def process_event(self, event: PlayerInput) -> PlayerInput | None:
         """

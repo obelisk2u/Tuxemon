@@ -1,125 +1,49 @@
 events:
 
-  Scenario:
+  New Game Setup:
     actions:
-    - change_bg gradient_blue
-    - translated_dialog_choice spyder_campaign:xero_campaign:water_campaign,scenario_choice
+    - rename_player player
+    - choice_npc appearance_adventurer:appearance_adventurerblack:appearance_adventurer_green:appearance_adventurer_yellow,appearance_choice
+    - choice_monster rockitten:cardiling:tweesher,starter_choice
+    - add_monster starter_choice,5
+    - transition_teleport player,hometown.tmx,20,17,0.3
+    - set_variable setup_done:yes
     conditions:
-    - not variable_set scenario_choice
-    - not variable_set gender_choice
-    - not variable_set race_choice
+    - not variable_set setup_done:yes
     type: event
 
-  Gender:
-    actions:
-    - change_bg gradient_blue,choice_gender,image
-    - translated_dialog_choice gender_male:gender_female:gender_nonbinary,gender_choice
-    conditions:
-    - is variable_set scenario_choice
-    - not variable_set gender_choice
-    - not variable_set race_choice
-    type: event
-
-  Gender Male:
-    actions:
-    - set_char_attribute player,gender,male
-    - change_bg gradient_blue,choice_gender,image
-    - translated_dialog_choice black_male:white_male,race_choice
-    conditions:
-    - is variable_set scenario_choice
-    - is variable_set gender_choice:gender_male
-    - not variable_set race_choice
-    type: event
-
-
-  Gender Female:
-    actions:
-    - set_char_attribute player,gender,female
-    - change_bg gradient_blue,choice_gender,image
-    - translated_dialog_choice black_female:white_female,race_choice
-    conditions:
-    - is variable_set scenario_choice
-    - is variable_set gender_choice:gender_female
-    - not variable_set race_choice
-    type: event
-
-
-  Gender Nonbinary:
-    actions:
-    - set_char_attribute player,gender,nonbinary
-    - change_bg gradient_blue,choice_gender,image
-    - translated_dialog_choice gender_enby:gender_whatever,race_choice
-    conditions:
-    - is variable_set scenario_choice
-    - is variable_set gender_choice:gender_nonbinary
-    - not variable_set race_choice
-    type: event
-
-
-
-  Black Female:
-    actions:
-    - set_template player,brownheroine_brown,heroineblack
-    conditions:
-    - is variable_set race_choice:black_female
-    type: event
-  Black Male:
-    actions:
-    - set_template player,adventurerblack,adventurerblack
-    conditions:
-    - is variable_set race_choice:black_male
-    type: event
-  Gender Enby:
-    actions:
-    - set_template player,enbyasian,enbyasian
-    conditions:
-    - is variable_set race_choice:gender_enby
-    type: event
-  Whatever Penguin:
-    actions:
-    - set_template player,penguin,penguin
-    conditions:
-    - is variable_set race_choice:gender_whatever
-    type: event
-  White Female:
-    actions:
-    - set_template player,heroine,heroine
-    conditions:
-    - is variable_set race_choice:white_female
-    type: event
-  White Male:
+  Apply Adventurer:
     actions:
     - set_template player,adventurer,adventurer
+    - set_variable appearance_set:yes
     conditions:
-    - is variable_set race_choice:white_male
+    - is variable_set appearance_choice:appearance_adventurer
+    - not variable_set appearance_set:yes
     type: event
 
-
-
-  Spyder:
+  Apply Adventurer Black:
     actions:
-    - change_bg gradient_blue
-    - transition_teleport player,spyder_bedroom.tmx,4,4,0.3
+    - set_template player,adventurerblack,adventurerblack
+    - set_variable appearance_set:yes
     conditions:
-    - is variable_set scenario_choice:spyder_campaign
-    - is variable_set gender_choice
-    - is variable_set race_choice
+    - is variable_set appearance_choice:appearance_adventurerblack
+    - not variable_set appearance_set:yes
     type: event
-  Xero:
+
+  Apply Adventurer Green:
     actions:
-    - change_bg gradient_blue
-    - transition_teleport player,player_house_bedroom.tmx,4,4,0.3
+    - set_template player,adventurer_green,adventurer_green
+    - set_variable appearance_set:yes
     conditions:
-    - is variable_set scenario_choice:xero_campaign
-    - is variable_set gender_choice
-    - is variable_set race_choice
+    - is variable_set appearance_choice:appearance_adventurer_green
+    - not variable_set appearance_set:yes
     type: event
-  Water:
+
+  Apply Adventurer Yellow:
     actions:
-    - change_bg gradient_blue
-    - transition_teleport player,water_end_of_desert.tmx,11,32,0.5
+    - set_template player,adventurer_yellow,adventurer_yellow
+    - set_variable appearance_set:yes
     conditions:
-    - is variable_set scenario_choice:water_campaign
-    - is variable_set gender_choice
-    - is variable_set race_choice
+    - is variable_set appearance_choice:appearance_adventurer_yellow
+    - not variable_set appearance_set:yes
     type: event
