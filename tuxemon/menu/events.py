@@ -21,6 +21,20 @@ _EVENT_MAP: Final[dict[int, Callable[[], Event]]] = {
 
 
 def playerinput_to_event(event: PlayerInput) -> Event | None:
+    if event.button == buttons.MOUSELEFT:
+        if event.pressed:
+            pos = event.value
+            if not isinstance(pos, (tuple, list)) or len(pos) != 2:
+                return None
+            return Event(pygame.MOUSEBUTTONDOWN, pos=pos, button=1)
+        if event.released:
+            # release() zeroes PlayerInput.value, so the click position is
+            # no longer available there; use the live cursor position.
+            return Event(
+                pygame.MOUSEBUTTONUP, pos=pygame.mouse.get_pos(), button=1
+            )
+        return None
+
     factory = _EVENT_MAP.get(event.button)
     if not factory:
         return None

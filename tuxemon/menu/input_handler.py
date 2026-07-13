@@ -165,6 +165,11 @@ class MenuInputHandler(InputHandler, PressLogicMixin):
         if not self._menu_interactable():
             return False
 
+        # Selection fires on press; the release carries no position data
+        # (release() zeroes PlayerInput.value), so just consume it quietly.
+        if not event.pressed:
+            return event.released
+
         mouse_pos = event.value
         if not isinstance(mouse_pos, (tuple, list)) or len(mouse_pos) != 2:
             raise ValueError(f"Invalid mouse_pos received: {mouse_pos}")
@@ -174,9 +179,12 @@ class MenuInputHandler(InputHandler, PressLogicMixin):
 
         group_rect = self._menu.menu_items.rect
 
-        if not group_rect.collidepoint(mouse_pos):
-            return False  # allow propagation
-
+        # NOTE: group_rect is a separately *designed* container size, not
+        # derived from the actual laid-out items - it can be smaller than
+        # the real item extent (e.g. InputMenu's control row renders below
+        # it), which would silently make trailing items unclickable. So it's
+        # only used here as the coordinate-conversion origin, never as an
+        # early-reject filter; every item is always checked individually.
         local_pos = (
             mouse_pos[0] - group_rect.left,
             mouse_pos[1] - group_rect.top,
@@ -240,6 +248,21 @@ class PygameMenuInputHandler(InputHandler, PressLogicMixin):
             buttons.RIGHT,
         ):
             if self._state.open and self._is_press(event, self.REPEAT_DELAY):
+                try:
+                    self._state.menu.update([pygame_event])
+                    self._state.selected_widget = (
+                        self._state.menu.get_selected_widget()
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Unexpected error in menu event processing: {e}"
+                    )
+            return None
+
+        # Mouse clicks: pygame_menu widgets fire on button-up, so both the
+        # press and the release must reach the menu.
+        if event.button == buttons.MOUSELEFT:
+            if self._state.open and (event.pressed or event.released):
                 try:
                     self._state.menu.update([pygame_event])
                     self._state.selected_widget = (

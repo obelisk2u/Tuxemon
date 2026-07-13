@@ -62,7 +62,10 @@ class DialogState(PopUpMenu[None]):
         self.on_complete = on_complete
         self.auto_close = auto_close
         self.close_after = close_after
-        self.advance_buttons = advance_buttons or [buttons.A]
+        self.advance_buttons = advance_buttons or [
+            buttons.A,
+            buttons.MOUSELEFT,
+        ]
         self.per_line_timeout = per_line_timeout
         self.dialog_speed = dialog_speed or self.client.config.dialog_speed
 

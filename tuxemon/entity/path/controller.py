@@ -56,6 +56,10 @@ class PathController:
         self.exec = PathExecutionState()
 
     @property
+    def pathfinder(self) -> Pathfinder:
+        return self._pathfinder
+
+    @property
     def move_destination(self) -> tuple[int, int] | None:
         """Only used for the char_moved condition."""
         return self.path.next()
@@ -360,5 +364,11 @@ class PathController:
             self._repath_cooldown = cmd.cooldown
             if cmd.immediate:
                 self.start_path(cmd.destination)
+            else:
+                # Drop the blocked waypoint so next_waypoint() isn't
+                # retried every frame against the same obstruction, which
+                # would keep resetting the cooldown and prevent it from
+                # ever actually elapsing.
+                self.path = PathView([])
         elif isinstance(cmd, StopMovementCommand):
             self.owner.stop_moving()

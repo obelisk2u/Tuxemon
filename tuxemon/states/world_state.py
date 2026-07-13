@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections import deque
 from collections.abc import Mapping
 from typing import (
     TYPE_CHECKING,
@@ -11,10 +12,11 @@ from typing import (
     no_type_check,
 )
 
+import pygame
 from pygame.font import Font, get_default_font
 from pygame.surface import Surface
 
-from tuxemon.camera.camera import Camera
+from tuxemon.camera.camera import Camera, project, unproject
 from tuxemon.db import Direction
 from tuxemon.event.eventmiddleware import (
     CameraControlMiddleware,
@@ -24,6 +26,9 @@ from tuxemon.event.eventmiddleware import (
     WorldCommandMiddleware,
 )
 from tuxemon.faction.manager import FactionManager
+from tuxemon.graphics import load_and_scale
+from tuxemon.item.filter import ItemFilter
+from tuxemon.platform.const import buttons
 from tuxemon.platform.const.graphics import WHITE_COLOR
 from tuxemon.platform.events import PlayerInput
 from tuxemon.prepare import DEV_TOOLS
@@ -106,6 +111,17 @@ class WorldState(State):
             )
         self.client.event_manager.add_middleware(self.command_mw, priority=30)
 
+        # load_and_scale()'s default scale parameter is bound at import time
+        # (DISPLAY_CONTEXT.scale as it was when tuxemon.graphics was first
+        # imported), not the real runtime scale, so it must be passed
+        # explicitly here to avoid an under-scaled icon.
+        bag_icon = load_and_scale(
+            "gfx/ui/item/backpack.png", self.client.context.scale
+        )
+        half_size = (bag_icon.get_width() // 2, bag_icon.get_height() // 2)
+        self._bag_icon = pygame.transform.smoothscale(bag_icon, half_size)
+        self._bag_icon_rect = self._bag_icon.get_rect()
+
     def get_state(self, session: Session) -> WorldSave:
         """Returns a WorldSave model representing the current world state."""
         return WorldSave(
@@ -161,6 +177,16 @@ class WorldState(State):
         )
         self.transition_manager.draw(surface)
         self._draw_position_hud(surface)
+        self._draw_click_target_marker(surface)
+        self._draw_bag_icon(surface)
+
+    def _draw_bag_icon(self, surface: Surface) -> None:
+        """Draw a clickable bag icon in the bottom-right corner."""
+        self._bag_icon_rect.bottomright = (
+            surface.get_width() - 8,
+            surface.get_height() - 8,
+        )
+        surface.blit(self._bag_icon, self._bag_icon_rect)
 
     def _draw_position_hud(self, surface: Surface) -> None:
         """Draw the player's current tile position in the top-right corner."""
@@ -176,6 +202,153 @@ class WorldState(State):
         rect = image.get_rect()
         rect.topright = (surface.get_width() - 8, 8)
         surface.blit(image, rect)
+
+    def _map_renderer_offset_and_ratio(
+        self,
+    ) -> tuple[float, float, float, float] | None:
+        """
+        Returns (offset_x, offset_y, ratio_x, ratio_y) that convert a
+        world/project-space pixel position into a true final on-screen pixel
+        position (i.e. within the actual surface passed to draw()).
+
+        NOTE: pyscroll's `translate_point()`/`_real_ratio_x/y` are NOT usable
+        for this directly. BufferedRenderer.__init__ sets `_zoom_level` from
+        the `zoom` constructor kwarg without going through the `zoom`
+        property setter, so `_real_ratio_x/y` never gets computed from it and
+        stays at its default of 1.0 - meaning translate_point() actually
+        returns coordinates in the oversized internal zoom-buffer space
+        (e.g. 2560x1440 for a 1280x720 screen at 0.5 zoom), not final screen
+        pixels. Sprites get away with this because pyscroll's own draw()
+        rescales the whole composited buffer afterward; code that draws
+        directly onto the final surface (like this marker) must apply that
+        buffer->screen scale itself. We compute it from the actual buffer
+        size rather than hardcoding WORLD_VIEW_ZOOM, so it stays correct even
+        if that constant or the buffer sizing logic changes.
+        """
+        current_map = self.client.map_manager.current_map
+        if current_map is None or current_map.renderer is None:
+            return None
+        renderer = current_map.renderer
+        offset_x, offset_y = renderer.get_center_offset()
+        buffer_size = renderer._zoom_buffer.get_size()
+        screen_size = renderer._size
+        ratio_x = screen_size[0] / buffer_size[0]
+        ratio_y = screen_size[1] / buffer_size[1]
+        return offset_x, offset_y, ratio_x, ratio_y
+
+    def _world_to_screen(self, world_pos: tuple[float, float]) -> tuple[int, int] | None:
+        offsets = self._map_renderer_offset_and_ratio()
+        if offsets is None:
+            return None
+        offset_x, offset_y, ratio_x, ratio_y = offsets
+        return (
+            round(round(world_pos[0] + offset_x) * ratio_x),
+            round(round(world_pos[1] + offset_y) * ratio_y),
+        )
+
+    def _screen_to_world(self, screen_pos: tuple[float, float]) -> tuple[float, float] | None:
+        offsets = self._map_renderer_offset_and_ratio()
+        if offsets is None:
+            return None
+        offset_x, offset_y, ratio_x, ratio_y = offsets
+        return (
+            screen_pos[0] / ratio_x - offset_x,
+            screen_pos[1] / ratio_y - offset_y,
+        )
+
+    def _draw_click_target_marker(self, surface: Surface) -> None:
+        """Draw a marker over the tile the player is currently walking to."""
+        if self.player is None:
+            return
+        target = self.player.path_controller.pathfinding
+        if target is None:
+            return
+
+        context = self.client.context
+        tile_w, tile_h = context.tile_size
+        target_world = project(context, target)
+        target_center = (
+            target_world[0] + tile_w / 2,
+            target_world[1] + tile_h / 2,
+        )
+
+        screen_pos = self._world_to_screen(target_center)
+        if screen_pos is None:
+            return
+        pygame.draw.circle(surface, (255, 40, 40), screen_pos, 7, 2)
+        pygame.draw.circle(surface, (255, 40, 40), screen_pos, 1)
+
+    def _handle_click_to_move(self, event: PlayerInput) -> bool:
+        """Pathfind the player to the tile clicked on the map."""
+        if event.button != buttons.MOUSELEFT or not event.pressed:
+            return False
+
+        if not self.client.movement_manager.is_movement_allowed(self.player):
+            return False
+
+        camera = self.client.camera_manager.get_active_camera()
+        if camera is None or not camera.is_following():
+            return False
+
+        screen_pos = event.value
+        if not isinstance(screen_pos, (tuple, list)) or len(screen_pos) != 2:
+            return False
+
+        world_pos = self._screen_to_world(screen_pos)
+        if world_pos is None:
+            return False
+        tile_pos = unproject(self.client.context, world_pos)
+
+        destination = self._nearest_reachable_tile(tile_pos)
+        if destination is None:
+            return True
+
+        self.player.pathfind(destination)
+        return True
+
+    def _nearest_reachable_tile(
+        self, target: tuple[int, int], max_radius: int = 8
+    ) -> tuple[int, int] | None:
+        """
+        Returns `target` if it's reachable from the player, otherwise the
+        closest reachable tile to it (so clicking on/near a building or
+        other obstacle still walks the player as close as possible instead
+        of silently doing nothing).
+        """
+        pathfinder = self.player.path_controller.pathfinder
+        start = self.player.tile_pos
+
+        reachable: set[tuple[int, int]] = {start}
+        queue: deque[tuple[int, int]] = deque([start])
+        while queue:
+            pos = queue.popleft()
+            if pos == target:
+                return target
+            for neighbor in pathfinder.get_exits(
+                position=pos, facing=self.player.facing
+            ):
+                if neighbor not in reachable:
+                    reachable.add(neighbor)
+                    queue.append(neighbor)
+
+        if target in reachable:
+            return target
+
+        best: tuple[int, int] | None = None
+        best_dist = None
+        for pos in reachable:
+            dx = pos[0] - target[0]
+            dy = pos[1] - target[1]
+            dist = dx * dx + dy * dy
+            if best_dist is None or dist < best_dist:
+                best = pos
+                best_dist = dist
+
+        if best is None or best == start:
+            return None
+        if max(abs(best[0] - target[0]), abs(best[1] - target[1])) > max_radius:
+            return None
+        return best
 
     def process_event(self, event: PlayerInput) -> PlayerInput | None:
         """
@@ -200,7 +373,34 @@ class WorldState(State):
         """
         if self.player is None:
             return None
+        if self._handle_bag_icon_click(event):
+            return None
+        if self._handle_click_to_move(event):
+            return None
         return event
+
+    def _handle_bag_icon_click(self, event: PlayerInput) -> bool:
+        """Open the bag when the bottom-right bag icon is clicked."""
+        if event.button != buttons.MOUSELEFT or not event.pressed:
+            return False
+
+        screen_pos = event.value
+        if not isinstance(screen_pos, (tuple, list)) or len(screen_pos) != 2:
+            return False
+
+        if not self._bag_icon_rect.collidepoint(screen_pos):
+            return False
+
+        items_filtered = ItemFilter(self.player.items)
+        items_filtered.set_filter_all_visible()
+        self.client.push_state(
+            "ItemMenuState",
+            character=self.player,
+            source="WorldMenuState",
+            item_filter=items_filtered,
+            escape_key_exits=True,
+        )
+        return True
 
     @no_type_check  # only used by multiplayer which is disabled
     def check_interactable_space(self) -> bool:

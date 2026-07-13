@@ -9524,6 +9524,9 @@ msgstr "Adventurer (Dark)"
 msgid "appearance_adventurer_green"
 msgstr "Adventurer (Green)"
 
+msgid "extra_tuxemon_offer"
+msgstr "You only have one Tuxemon! I have these extras if you want another?"
+
 msgid "appearance_adventurer_yellow"
 msgstr "Adventurer (Yellow)"
 

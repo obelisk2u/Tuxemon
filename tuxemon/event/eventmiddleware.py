@@ -208,6 +208,16 @@ class MovementMiddleware(EventMiddleware):
         # Handle directional movement
         if direction:
             if event.held:
+                # Manual movement always takes priority over an in-progress
+                # click-to-move path; cancel it immediately rather than
+                # waiting for the path to reach a clean tile boundary.
+                # preserve_position=True matters here: a bare cancel_path()
+                # leaves path/moving in a state that process_movement()'s
+                # subsequent cancel_movement() call misreads as "not mid
+                # movement", making it snap the sprite back to the last
+                # completed tile instead of leaving it where it visually is.
+                if event.pressed and self.character.path:
+                    self.character.abort_movement(preserve_position=True)
                 self.movement_manager.queue_movement(
                     self.character.slug, direction
                 )

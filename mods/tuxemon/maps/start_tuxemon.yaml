@@ -2,10 +2,11 @@ events:
 
   New Game Setup:
     actions:
-    - rename_player player
+    - rename_player player,,blank
     - choice_npc appearance_adventurer:appearance_adventurerblack:appearance_adventurer_green:appearance_adventurer_yellow,appearance_choice
     - choice_monster rockitten:cardiling:tweesher,starter_choice
     - add_monster starter_choice,5
+    - add_item tuxeball,5
     - transition_teleport player,hometown.tmx,20,17,0.3
     - set_variable setup_done:yes
     conditions:

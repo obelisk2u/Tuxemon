@@ -174,7 +174,12 @@ class Pathfinder:
         logger.info(f"Pathfinding from {start} to {dest}.")
         open_set: list[PathfindNode] = []
         g_costs: dict[tuple[int, int], float] = {start: 0.0}
-        known_nodes: set[tuple[int, int]] = set()
+        # Tiles whose optimal cost has been finalized (popped), and thus
+        # should not be re-expanded. This must only grow on pop, not on
+        # push/discovery - marking a tile closed as soon as it's merely
+        # seen would make it permanently unreachable as a neighbor from
+        # any other direction, causing valid paths to be missed.
+        closed_nodes: set[tuple[int, int]] = set()
 
         start_node = PathfindNode(
             start, g_cost=0.0, h_cost=manhattan_distance(start, dest)
@@ -185,15 +190,23 @@ class Pathfinder:
             current_node = heappop(open_set)
             current_pos = current_node.get_value()
 
+            if current_pos in closed_nodes:
+                continue
+
             if current_pos == dest:
                 logger.info(f"Destination {dest} reached.")
                 return current_node.reconstruct_path()
 
+            closed_nodes.add(current_pos)
+
             for neighbor_pos in self.get_exits(
                 position=current_pos,
                 facing=facing,
-                skip_nodes=known_nodes,
+                skip_nodes=closed_nodes,
             ):
+                if neighbor_pos in closed_nodes:
+                    continue
+
                 new_g_cost = g_costs[current_pos] + 1
 
                 if new_g_cost < g_costs.get(neighbor_pos, float("inf")):
@@ -206,7 +219,6 @@ class Pathfinder:
                         h_cost=neighbor_h_cost,
                     )
                     heappush(open_set, neighbor_node)
-                    known_nodes.add(neighbor_pos)
 
         logger.warning(f"No path found to destination {dest}.")
         return None

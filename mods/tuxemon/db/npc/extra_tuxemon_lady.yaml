@@ -1,0 +1,10 @@
+slug: extra_tuxemon_lady
+speech:
+  profile:
+    default: {}
+combat: {}
+audio: {}
+template:
+  sprite_name: brownheroine_brown
+  combat_sheet: heroineblack
+  slug: heroine

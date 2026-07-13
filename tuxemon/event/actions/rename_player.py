@@ -27,16 +27,21 @@ class RenamePlayerAction(EventAction):
     Script usage:
         .. code-block::
 
-            rename_player <character> [random]
+            rename_player <character> [random] [blank]
 
     Script parameters:
         character: Either "player" or an NPC slug (e.g. "npc_maple")
         random: Adding "random" makes appear the dontcare button in the input.
+        blank: Adding "blank" starts the input field empty instead of
+            pre-filled with the character's current name (e.g. for naming a
+            brand new character, where the current name is just a random
+            placeholder rather than something worth keeping).
     """
 
     name = "rename_player"
     character: str
     random: str | None = None
+    blank: str | None = None
 
     def set_player_name(self, char: NPC, name: str) -> None:
         char.name = name
@@ -49,12 +54,14 @@ class RenamePlayerAction(EventAction):
             self.stop()
             return
 
+        initial = "" if self.blank else session.player.name
+
         session.client.push_state(
             "InputMenu",
             prompt=T.translate("input_name"),
             callback=partial(self.set_player_name, character),
             escape_key_exits=False,
-            initial=session.player.name,
+            initial=initial,
             char_limit=PLAYER_NAME_LIMIT,
             random=bool(self.random),
         )
