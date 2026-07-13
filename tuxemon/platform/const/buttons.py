@@ -23,3 +23,4 @@ BACK = 16384
 
 # For mouse click and finger tap events
 MOUSELEFT = 32768
+MOUSERIGHT = 65536

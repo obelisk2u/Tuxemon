@@ -28,7 +28,8 @@ from tuxemon.event.eventmiddleware import (
 from tuxemon.faction.manager import FactionManager
 from tuxemon.graphics import load_and_scale
 from tuxemon.item.filter import ItemFilter
-from tuxemon.platform.const import buttons
+from tuxemon.map.map import get_direction
+from tuxemon.platform.const import buttons, intentions
 from tuxemon.platform.const.graphics import WHITE_COLOR
 from tuxemon.platform.events import PlayerInput
 from tuxemon.prepare import DEV_TOOLS
@@ -375,9 +376,57 @@ class WorldState(State):
             return None
         if self._handle_bag_icon_click(event):
             return None
+        if self._handle_npc_right_click(event):
+            return None
         if self._handle_click_to_move(event):
             return None
         return event
+
+    def _handle_npc_right_click(self, event: PlayerInput) -> bool:
+        """Face and interact with an adjacent NPC on right-click."""
+        if event.button != buttons.MOUSERIGHT or not event.pressed:
+            return False
+
+        screen_pos = event.value
+        if not isinstance(screen_pos, (tuple, list)) or len(screen_pos) != 2:
+            return False
+
+        world_pos = self._screen_to_world(screen_pos)
+        if world_pos is None:
+            return False
+        tile_pos = unproject(self.client.context, world_pos)
+
+        player_tile = (
+            int(round(self.player.tile_pos[0])),
+            int(round(self.player.tile_pos[1])),
+        )
+
+        npc = None
+        for candidate in self.client.npc_manager.npcs.values():
+            candidate_tile = (
+                int(round(candidate.tile_pos[0])),
+                int(round(candidate.tile_pos[1])),
+            )
+            if candidate_tile == tile_pos:
+                npc = candidate
+                break
+        if npc is None:
+            return False
+
+        distance = abs(player_tile[0] - tile_pos[0]) + abs(
+            player_tile[1] - tile_pos[1]
+        )
+        if distance != 1:
+            return False
+
+        self.player.set_facing(get_direction(player_tile, tile_pos))
+
+        interact_press = PlayerInput(intentions.INTERACT)
+        interact_press.value = 1
+        interact_press.previous_value = 0
+        interact_press.hold_time = 1
+        self.client.input_cache.handle_input_event(interact_press)
+        return True
 
     def _handle_bag_icon_click(self, event: PlayerInput) -> bool:
         """Open the bag when the bottom-right bag icon is clicked."""

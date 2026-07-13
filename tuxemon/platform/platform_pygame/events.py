@@ -641,12 +641,20 @@ class PygameMouseInput(PygameEventHandler):
     """
 
     default_input_map = {
-        pg.MOUSEBUTTONDOWN: buttons.MOUSELEFT,
-        pg.MOUSEBUTTONUP: buttons.MOUSELEFT,
+        (pg.MOUSEBUTTONDOWN, 1): buttons.MOUSELEFT,
+        (pg.MOUSEBUTTONUP, 1): buttons.MOUSELEFT,
+        (pg.MOUSEBUTTONDOWN, 3): buttons.MOUSERIGHT,
+        (pg.MOUSEBUTTONUP, 3): buttons.MOUSERIGHT,
     }
 
     def process_event(self, pg_event: Event) -> None:
         if pg_event.type == pg.MOUSEBUTTONDOWN:
-            self.press(buttons.MOUSELEFT, pg_event.pos)
+            if pg_event.button == 1:
+                self.press(buttons.MOUSELEFT, pg_event.pos)
+            elif pg_event.button == 3:
+                self.press(buttons.MOUSERIGHT, pg_event.pos)
         elif pg_event.type == pg.MOUSEBUTTONUP:
-            self.release(buttons.MOUSELEFT)
+            if pg_event.button == 1:
+                self.release(buttons.MOUSELEFT)
+            elif pg_event.button == 3:
+                self.release(buttons.MOUSERIGHT)
